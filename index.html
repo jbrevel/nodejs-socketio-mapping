@@ -1,0 +1,84 @@
+<!--
+Author: John Loughrey
+Date: 19/04/2016
+-->
+<html>
+  <head>
+    <title>Socket.io</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <script src = "http://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+    <!-- Leaflet Plugin -->
+    <link rel="stylesheet" href="http://angularmap/assets/plugins/leaflet-0.7.3/leaflet.css" />
+    <script src="http://angularmap.repknight.com/assets/plugins/leaflet-0.7.3/leaflet.js"></script>
+
+    <!-- Clustering Plugin -->
+    <link rel="stylesheet" href="http://angularmap/assets/mapping/MarkerCluster.css" />
+    <link rel="stylesheet" href="http://angularmap/assets/mapping/MarkerCluster.Default.css" />
+    <script src="http://angularmap/assets/mapping/leaflet.markercluster-src.js"></script>
+    <script>
+        
+    //Generate a unique string of random alpha-numeric chars
+    function randomString(length) {
+        var result = '';
+        var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        for (var i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+        return result;
+    }
+        
+    //On page load connect to node server
+    $(document).ready(function(){
+        //Connect to server and pass params
+        var socket = io('', {query: 'socketid='+randomString(20)});
+        
+        //Emit message to kick of message retrieval
+        socket.emit('getmessages');
+        
+        //Generate google map with leaflet
+        var tiles = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 18,
+            subdomains:['mt0','mt1','mt2','mt3'],
+        }),
+        //Lat and Lng of Belfast
+        latlng = L.latLng(54.592169, -5.940143);
+
+        var map = L.map('map', {center: latlng, zoom: 13, layers: [tiles], scrollWheelZoom: false,});
+
+        var markers = L.markerClusterGroup({ chunkedLoading: true });
+
+        //On receiving message from server add to map and list
+        socket.on('message', function(message){
+            //Parse response json
+            response = JSON.parse(message);
+            
+            //If response is add then add message to map and list
+            if (response.type == "add") {
+                //Add message to list div
+                $('#tweets').append(response.username + ": " + response.msg + "<br/>");
+
+                //Set up marker options
+                var marker = L.marker(L.latLng(response.lat, response.lng), { title: response.msg });
+
+                marker.on( 'click', function() {
+                    var message = this.options.title;
+                });
+
+                marker.bindPopup('loading....');
+
+                markers.addLayer(marker);
+
+                map.addLayer(markers);
+
+            }
+         });
+    });
+        
+    </script>
+  </head>
+  <body>
+      <div id="map" style="float: left; height: 500px; width: 800px; margin: 30px auto;"></div>
+      <div id="tweets" style="float: right; height: 500px; width: 300px; margin: 30px auto;"></div>
+  </body>
+</html>
