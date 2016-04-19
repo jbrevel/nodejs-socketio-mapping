@@ -6,4 +6,4 @@
 
 - Run 'npm server.js' to start node server.
 
-- Visit 'localhost:3000' to view the app.
+- Visit 'localhost:3000' to view the app. 
